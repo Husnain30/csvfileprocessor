@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model CsvFile {
+  id             String    @id @default(cuid())
+  originalName   String
+  status         String    @default("pending") // pending | processing | completed | failed
+  rowCount       Int?
+  processedCount Int?      @default(0)
+  errorCount     Int?      @default(0)
+  insights       String?   // JSON string from AI
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  products       Product[]
+
+  @@map("csv_files")
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  fileId       String
+  file         CsvFile  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  // Processed / normalized fields
+  name         String?
+  slug         String?
+  price        Float?
+  category     String?
+  sku          String?
+
+  // Status of this individual row
+  status       String   @default("processed") // processed | error | duplicate
+  errorMessage String?
+
+  // Raw data from CSV row (all original columns preserved as JSON)
+  rawData      Json     @default("{}")
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([fileId])
+  @@index([slug])
+  @@index([status])
+  @@map("products")
+}
